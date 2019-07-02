@@ -1,0 +1,320 @@
+**helm get kibana**
+    REVISION: 1
+    RELEASED: Tue Jul  2 20:16:50 2019
+    CHART: kibana-7.1.1
+    USER-SUPPLIED VALUES:
+    elasticsearchHosts: https://clustername-master:9200
+    extraEnvs:
+    - name: ELASTICSEARCH_USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: elastic-credentials
+    - name: ELASTICSEARCH_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: elastic-credentials
+    image: docker.elastic.co/kibana/kibana
+    imagePullPolicy: IfNotPresent
+    imageTag: 6.8.0
+    kibanaConfig:
+      kibana.yml: |
+        server.ssl:
+          enabled: true
+          key: /usr/share/kibana/config/certs/kibana/kibana.key
+          certificate: /usr/share/kibana/config/certs/kibana/kibana.crt
+        xpack.security.encryptionKey: something_at_least_32_characters
+        elasticsearch.ssl:
+          certificateAuthorities: /usr/share/kibana/config/certs/elastic-certificate.pem
+          verificationMode: certificate
+    persistentVolumeClaim:
+      size: 5Gi
+      storageClass: rkcph-flinkes-kibana
+    protocol: https
+    resources:
+      limits:
+        cpu: 500m
+        memory: 2048Mi
+      requests:
+        cpu: 300m
+        memory: 1024Mi
+    secretMounts:
+    - name: elastic-certificate-pem
+      path: /usr/share/kibana/config/certs
+      secretName: elastic-certificate-pem
+    - name: kibana-certificates
+      path: /usr/share/kibana/config/certs/kibana
+      secretName: kibana-certificates
+    serverHost: 0.0.0.0
+    service:
+      externalPort: 5601
+
+    COMPUTED VALUES:
+    affinity: {}
+    antiAffinity: hard
+    antiAffinityTopologyKey: kubernetes.io/hostname
+    elasticsearchHosts: https://clustername-master:9200
+    elasticsearchURL: ""
+    extraEnvs:
+    - name: ELASTICSEARCH_USERNAME
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: elastic-credentials
+    - name: ELASTICSEARCH_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: elastic-credentials
+    fullnameOverride: ""
+    healthCheckPath: /app/kibana
+    httpPort: 5601
+    image: docker.elastic.co/kibana/kibana
+    imagePullPolicy: IfNotPresent
+    imagePullSecrets: []
+    imageTag: 6.8.0
+    ingress:
+      annotations: {}
+      enabled: false
+      hosts:
+      - chart-example.local
+      path: /
+      tls: []
+    kibanaConfig:
+      kibana.yml: |
+        server.ssl:
+          enabled: true
+          key: /usr/share/kibana/config/certs/kibana/kibana.key
+          certificate: /usr/share/kibana/config/certs/kibana/kibana.crt
+        xpack.security.encryptionKey: something_at_least_32_characters
+        elasticsearch.ssl:
+          certificateAuthorities: /usr/share/kibana/config/certs/elastic-certificate.pem
+          verificationMode: certificate
+    maxUnavailable: 1
+    nameOverride: ""
+    nodeSelector: {}
+    persistentVolumeClaim:
+      size: 5Gi
+      storageClass: rkcph-flinkes-kibana
+    podSecurityContext: {}
+    priorityClassName: ""
+    protocol: https
+    readinessProbe:
+      failureThreshold: 3
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      successThreshold: 3
+      timeoutSeconds: 5
+    replicas: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 2048Mi
+      requests:
+        cpu: 300m
+        memory: 1024Mi
+    secretMounts:
+    - name: elastic-certificate-pem
+      path: /usr/share/kibana/config/certs
+      secretName: elastic-certificate-pem
+    - name: kibana-certificates
+      path: /usr/share/kibana/config/certs/kibana
+      secretName: kibana-certificates
+    serverHost: 0.0.0.0
+    service:
+      annotations: {}
+      externalPort: 5601
+      port: 5601
+      type: ClusterIP
+    serviceAccount: ""
+    tolerations: []
+    updateStrategy:
+      type: Recreate
+
+    HOOKS:
+    MANIFEST:
+
+    ---
+    # Source: kibana/templates/configmap.yaml
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: kibana-kibana-config
+      labels:
+        app: kibana
+        release: "kibana"
+    data:
+      kibana.yml: |
+        server.ssl:
+          enabled: true
+          key: /usr/share/kibana/config/certs/kibana/kibana.key
+          certificate: /usr/share/kibana/config/certs/kibana/kibana.crt
+        xpack.security.encryptionKey: something_at_least_32_characters
+        elasticsearch.ssl:
+          certificateAuthorities: /usr/share/kibana/config/certs/elastic-certificate.pem
+          verificationMode: certificate
+    ---
+    # Source: kibana/templates/service.yaml
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: kibana-kibana
+      labels:
+        app: kibana
+        release: "kibana"
+        heritage: Tiller
+    spec:
+      type: ClusterIP
+      ports:
+        - port: 5601
+          protocol: TCP
+          name: http
+          targetPort: 5601
+      selector:
+        app: kibana
+        release: "kibana"
+    ---
+    # Source: kibana/templates/deployment.yaml
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: kibana-kibana
+      labels:
+        app: kibana
+        release: "kibana"
+    spec:
+      replicas: 1
+      strategy:
+        type: Recreate
+
+      selector:
+        matchLabels:
+          app: kibana
+          release: "kibana"
+      template:
+        metadata:
+          labels:
+            app: kibana
+            release: "kibana"
+          annotations:
+
+            configchecksum: db017d5102429ceff963a09660d5b911065ca2cd0e9198e8dffa8cc0d483e35
+        spec:
+          volumes:
+            - name: elastic-certificate-pem
+              secret:
+                secretName: elastic-certificate-pem
+            - name: kibana-certificates
+              secret:
+                secretName: kibana-certificates
+            - name: kibanaconfig
+              configMap:
+                name: kibana-kibana-config
+          containers:
+          - name: kibana
+            image: "docker.elastic.co/kibana/kibana:6.8.0"
+            env:
+              - name: ELASTICSEARCH_HOSTS
+                value: "https://clustername-master:9200"
+              - name: ELASTICSEARCH_USERNAME
+                valueFrom:
+                  secretKeyRef:
+                    key: username
+                    name: elastic-credentials
+              - name: ELASTICSEARCH_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    key: password
+                    name: elastic-credentials
+
+            readinessProbe:
+              failureThreshold: 3
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              successThreshold: 3
+              timeoutSeconds: 5
+
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - |
+                    #!/usr/bin/env bash -e
+                    http () {
+                        local path="${1}"
+                        set -- -XGET -s --fail
+
+                        if [ -n "${ELASTIC_USERNAME}" ] && [ -n "${ELASTIC_PASSWORD}" ]; then
+                          set -- "$@" -u "${ELASTIC_USERNAME}:${ELASTIC_PASSWORD}"
+                        fi
+
+                        curl -k "$@" "https://localhost:5601${path}"
+                    }
+
+                    http "/app/kibana"
+            ports:
+            - containerPort: 5601
+            resources:
+              limits:
+                cpu: 500m
+                memory: 2048Mi
+              requests:
+                cpu: 300m
+                memory: 1024Mi
+
+            volumeMounts:
+              - name: elastic-certificate-pem
+                mountPath: /usr/share/kibana/config/certs
+              - name: kibana-certificates
+                mountPath: /usr/share/kibana/config/certs/kibana
+              - name: kibanaconfig
+                mountPath: /usr/share/kibana/config/kibana.yml
+                subPath: kibana.yml
+
+
+   >  NAME                               TYPE                                  DATA   AGE
+>      elastic-certificate-pem            Opaque                                1      72m
+>     elastic-certificates               Opaque                                1      19d
+>     elastic-credentials                Opaque                                2      19d
+>     kibana-certificates                Opaque                                2      144m
+> 
+> 
+> NAME                                 READY   STATUS    RESTARTS   AGE
+> pod/clustername-data-0                   1/1     Running   0          32m
+> pod/clustername-data-1                   1/1     Running   0          32m
+> pod/clustername-data-2                   1/1     Running   0          32m
+> pod/clustername-master-0                 2/2     Running   0          48m
+> pod/clustername-master-1                 2/2     Running   0          48m
+> pod/clustername-master-2                 2/2     Running   0          48m
+> pod/kibana-kibana-684b865c85-8npl7   0/1     Running   0          7m10s
+> 
+> NAME                              TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)             AGE
+> service/flink-es-0                LoadBalancer   10.107.6.114     <pending>     9200:30920/TCP      33d
+> service/clustername-data              ClusterIP      10.111.191.163   <none>        9200/TCP,9300/TCP   32m
+> service/clustername-data-headless     ClusterIP      None             <none>        9200/TCP,9300/TCP   32m
+> service/clustername-master            ClusterIP      10.97.218.114    <none>        9200/TCP,9300/TCP   48m
+> service/clustername-master-headless   ClusterIP      None             <none>        9200/TCP,9300/TCP   48m
+> service/kibana-kibana             ClusterIP      10.101.174.82    <none>        5601/TCP            7m10s
+
+
+bash-4.2$ curl -k -u $ELASTICSEARCH_USERNAME:$ELASTICSEARCH_PASSWORD https://clustername-master:9200
+{
+  "name" : "clustername-master-0",
+  "cluster_name" : "clustername",
+  "cluster_uuid" : "S-cmz4asT0mqYPF8m8EsXQ",
+  "version" : {
+    "number" : "6.8.0",
+    "build_flavor" : "default",
+    "build_type" : "docker",
+    "build_hash" : "65b6179",
+    "build_date" : "2019-05-15T20:06:13.172855Z",
+    "build_snapshot" : false,
+    "lucene_version" : "7.7.0",
+    "minimum_wire_compatibility_version" : "5.6.0",
+    "minimum_index_compatibility_version" : "5.0.0"
+  },
+  "tagline" : "You Know, for Search"
+}
+
+
